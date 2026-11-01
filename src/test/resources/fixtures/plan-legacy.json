@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "worldName": "Old export world",
+    "seed": "123",
+    "home": { "minecraft:overworld": { "x": 5, "y": 80, "z": 6 } },
+    "kindColors": { "building": "#123456" }
+  },
+  "objects": [
+    { "id": "old1", "kind": "building", "name": "Old house", "color": "#e85a4a", "status": "planned",
+      "dimension": "minecraft:overworld", "points": [[0, 0], [6, 4]], "y": 64, "width": 0, "height": 5,
+      "notes": "", "author": "", "createdAt": 1700000000000, "updatedAt": 1700000000000 },
+    { "id": "old2", "kind": "path", "name": "Old path", "color": "#e8b04a", "status": "done",
+      "dimension": "minecraft:overworld", "points": [[0, 10], [20, 10]], "y": 64, "width": 2, "height": 0,
+      "notes": "", "author": "", "createdAt": 1700000000001, "updatedAt": 1700000000001 }
+  ]
+}

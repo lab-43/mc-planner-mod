@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "mcplanner",
+  "version": "${version}",
+  "name": "MC Planner",
+  "description": "See your MC Planner plans in Minecraft: paths, areas, buildings and markers from app.mc-planner.com (or a .mcplan file) as an overlay in the world. Sign in with your Lab43 account, navigate to what's next, mark it done. Client-side, works on any server.",
+  "authors": ["Lab43"],
+  "contact": {
+    "homepage": "https://www.mc-planner.com/mod",
+    "sources": "https://github.com/lab-43/mc-planner-mod",
+    "issues": "https://github.com/lab-43/mc-planner-mod/issues"
+  },
+  "license": "AGPL-3.0-only",
+  "icon": "assets/mcplanner/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.lab43.mcplanner.mc.McPlannerClient"],
+    "modmenu": ["dev.lab43.mcplanner.mc.compat.ModMenuEntry"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.160.0"
+  },
+  "suggests": {
+    "modmenu": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.website": "https://app.mc-planner.com"
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+# Modrinth upload of the MC Planner mod — runs in the PUBLIC repo lab-43/mc-planner-mod (see release.yml).
+#
+# A release is published (pnpm release:mod publish in the monorepo, or "Publish release" on GitHub) → the same jar
+# goes to Modrinth, with the notes from mod.json. Needs, in this repo's Settings → Secrets and variables → Actions:
+#   secret   MODRINTH_TOKEN   a Modrinth token that may create versions
+#   variable MODRINTH_ID      the Modrinth project's ID (or slug)
+# Without them the job is skipped (GitHub release only). Re-run by hand: Actions → Publish → Run workflow → tag.
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to send to Modrinth (e.g. v0.2.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  modrinth:
+    if: vars.MODRINTH_ID != ''
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Files of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "*.jar" --pattern "mod.json" --dir dist
+          # shellcheck disable=SC2016  # the node script is in single quotes on purpose (JS template strings)
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("dist/mod.json", "utf8"));
+            fs.writeFileSync("dist/notes.md", m.notes + "\n");
+            const out = [`version=${m.version}+mc${m.minecraft[0]}`, `name=MC Planner ${m.version}`, `channel=${m.channel}`, "minecraft<<EOV", ...m.minecraft, "EOV"];
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, out.join("\n") + "\n");
+          '
+        id: meta
+      # pinned (it gets the Modrinth token): v3.3.1
+      - uses: Kira-NT/mc-publish@52307b03863581dec6b652b83e597aec02ebb075
+        with:
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: dist/*.jar
+          name: ${{ steps.meta.outputs.name }}
+          version: ${{ steps.meta.outputs.version }}
+          version-type: ${{ steps.meta.outputs.channel }}
+          changelog-file: dist/notes.md
+          loaders: fabric
+          game-versions: ${{ steps.meta.outputs.minecraft }}
+          dependencies: |
+            fabric-api(required){modrinth:fabric-api}
+            modmenu(optional){modrinth:modmenu}
+          retry-attempts: 3

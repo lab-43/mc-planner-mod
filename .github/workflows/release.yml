@@ -1,0 +1,72 @@
+# Release build of the MC Planner mod — this file runs in the PUBLIC repo lab-43/mc-planner-mod.
+# (In the MC Planner monorepo it lives in apps/fabric-mod/.github and does nothing there; the monorepo's
+#  .github/workflows/fabric-mod.yml copies apps/fabric-mod here and pushes the tag. docs/RELEASES.md → "Minecraft mod".)
+#
+#  tag v0.2.0 pushed → build + every check → a DRAFT GitHub release with the jar, mod.json (read by mc-planner.com)
+#  and the notes from CHANGELOG.md. Publishing the draft (pnpm release:mod publish) starts publish.yml → Modrinth.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # jar + core tests + overlay geometry tests
+      - run: chmod +x gradlew && ./gradlew build --stacktrace
+      - run: node --test tools/release-files.test.mjs
+      - name: Release files
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: files
+        env:
+          MODRINTH_SLUG: ${{ vars.MODRINTH_SLUG }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          JAR=$(node tools/release-files.mjs "$TAG")
+          echo "jar=$JAR" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcplanner-mod
+          path: |
+            build/libs/*.jar
+            build/release/*
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          JAR: ${{ steps.files.outputs.jar }}
+        run: |
+          VERSION="${TAG#v}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # a re-run may refresh a DRAFT; a published release is never changed (Modrinth and mod.json have its files)
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "::error::$TAG is already published — release a new version instead"; exit 1
+            fi
+            gh release upload "$TAG" "$JAR" build/release/mod.json --clobber
+            gh release edit "$TAG" --notes-file build/release/notes.md
+          else
+            # never --prerelease (also not for 0.x / -beta): releases/latest/download/mod.json skips pre-releases, and the
+            # website reads that. Modrinth gets the channel (alpha / beta / release) from mod.json instead.
+            gh release create "$TAG" "$JAR" build/release/mod.json --draft \
+              --title "MC Planner $VERSION" --notes-file build/release/notes.md
+          fi

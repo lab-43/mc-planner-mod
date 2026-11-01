@@ -1,0 +1,61 @@
+// MC Planner for Minecraft — Fabric mod (client only). Minecraft 26.x is not obfuscated: the non-remapping Loom
+// plugin, plain `implementation` / `compileOnly`, and `jar` is the final mod jar (build/libs).
+//
+//   ./gradlew build        jar + all checks (core tests, overlay geometry tests)
+//   ./gradlew runClient    starts Minecraft with the mod (dev environment)
+//
+// Needs JDK 25 for Gradle itself (Loom's requirement for 26.x). Versions: gradle.properties.
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+base { archivesName = project.archives_base_name }
+
+repositories {
+	maven { name = 'Terraformers (Mod Menu)'; url = 'https://maven.terraformersmc.com/releases/' }
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// optional: the "Configure" button in Mod Menu
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+}
+
+processResources {
+	def version = project.mod_version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') { expand 'version': version }
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	from(rootProject.file('LICENSE')) { rename { "LICENSE_${project.archives_base_name}" } }
+	manifest { attributes('Fabric-Minecraft-Version': project.minecraft_version, 'Implementation-Version': project.mod_version) }
+}
+
+// Our tests are plain programs (no JUnit): the version-independent core and the overlay geometry.
+def testRun = { String name, String main ->
+	tasks.register(name, JavaExec) {
+		group = 'verification'
+		classpath = sourceSets.test.runtimeClasspath
+		mainClass = main
+	}
+}
+testRun('coreTest', 'dev.lab43.mcplanner.core.TestMain')
+testRun('meshTest', 'dev.lab43.mcplanner.mc.render.MeshTest')
+tasks.named('check') { dependsOn 'coreTest', 'meshTest' }
+// Gradle 9 fails a `test` task that finds no JUnit tests ("did not discover any tests") — ours are the two above.
+tasks.named('test') { enabled = false }

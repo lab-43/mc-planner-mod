@@ -1,0 +1,97 @@
+{
+ "world": {
+  "name": "Old export world",
+  "seed": "123"
+ },
+ "settings": {
+  "home": {
+   "minecraft:overworld": {
+    "x": 5,
+    "y": 80,
+    "z": 6
+   }
+  },
+  "kindColors": {
+   "building": "#123456"
+  }
+ },
+ "objects": [
+  {
+   "object": {
+    "id": "old1",
+    "kind": "building",
+    "name": "Old house",
+    "color": "#e85a4a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      6,
+      4
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 5,
+    "notes": "",
+    "author": "",
+    "createdAt": 1700000000000,
+    "updatedAt": 1700000000000
+   },
+   "counts": {
+    "blocks": 35,
+    "w": 7,
+    "d": 5,
+    "ring": 20,
+    "walls": 100,
+    "floor": 15,
+    "storeys": 1,
+    "storeyHeight": 4,
+    "roof": 35,
+    "volume": 175,
+    "shell": 135,
+    "approx": false
+   },
+   "describe": "7 × 5 · 35 footprint · 5 high"
+  },
+  {
+   "object": {
+    "id": "old2",
+    "kind": "path",
+    "name": "Old path",
+    "color": "#e8b04a",
+    "status": "done",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      10
+     ],
+     [
+      20,
+      10
+     ]
+    ],
+    "y": 64,
+    "width": 2,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 1700000000001,
+    "updatedAt": 1700000000001
+   },
+   "counts": {
+    "blocks": 63,
+    "w": 21,
+    "d": 1,
+    "length": 20,
+    "approx": false
+   },
+   "describe": "20 long · 2 wide · 63 blocks"
+  }
+ ]
+}

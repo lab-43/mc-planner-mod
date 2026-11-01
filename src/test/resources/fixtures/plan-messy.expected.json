@@ -1,0 +1,461 @@
+{
+ "world": {},
+ "settings": {
+  "home": null,
+  "kindColors": null
+ },
+ "objects": [
+  {
+   "object": {
+    "id": "3s4f031k5m0u0e",
+    "kind": "marker",
+    "name": "Marker",
+    "color": "#b04ae8",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      2,
+      -2
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 1,
+    "updatedAt": 2
+   },
+   "counts": {
+    "blocks": 1,
+    "w": 1,
+    "d": 1
+   },
+   "describe": "x 2 · y 64 · z -2"
+  },
+  {
+   "object": {
+    "id": "m2",
+    "kind": "marker",
+    "name": "12345",
+    "color": "#b04ae8",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      3,
+      4
+     ],
+     [
+      5,
+      6
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 0,
+    "notes": "",
+    "author": "7",
+    "createdAt": 5,
+    "updatedAt": 6
+   },
+   "counts": {
+    "blocks": 1,
+    "w": 1,
+    "d": 1
+   },
+   "describe": "x 3 · y 64 · z 4"
+  },
+  {
+   "object": {
+    "id": "p1",
+    "kind": "path",
+    "name": "Wobbly",
+    "color": "#ABCDEF",
+    "status": "idea",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      1
+     ],
+     [
+      11,
+      0
+     ],
+     [
+      7,
+      8
+     ],
+     [
+      -2,
+      3
+     ]
+    ],
+    "y": 64.4,
+    "width": 3,
+    "height": 0,
+    "group": "g-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "groupName": "Group",
+    "notes": "",
+    "author": "",
+    "createdAt": 10,
+    "updatedAt": 11
+   },
+   "counts": {
+    "blocks": 92,
+    "w": 14,
+    "d": 9,
+    "length": 30,
+    "approx": false
+   },
+   "describe": "30 long · 3 wide · 92 blocks"
+  },
+  {
+   "object": {
+    "id": "a1",
+    "kind": "area",
+    "name": "No width",
+    "color": "#4ab0e8",
+    "status": "planned",
+    "dimension": "minecraft:the_end",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      9,
+      0
+     ],
+     [
+      9,
+      9
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 0,
+    "material": "create:andesite_casing",
+    "group": "g2",
+    "groupName": "99",
+    "sourceUrl": "https://www.planetminecraft.com/project/abc",
+    "notes": "",
+    "author": "",
+    "createdAt": 12,
+    "updatedAt": 13
+   },
+   "counts": {
+    "blocks": 55,
+    "w": 10,
+    "d": 10,
+    "approx": false
+   },
+   "describe": "55 blocks of andesite casing (create) · 10 × 10"
+  },
+  {
+   "object": {
+    "id": "b1",
+    "kind": "building",
+    "name": "Bad schematic",
+    "color": "#e85a4a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      0
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 12,
+    "storey": 3,
+    "sourceUrl": "https://example.com/",
+    "notes": "",
+    "author": "",
+    "createdAt": 14,
+    "updatedAt": 15
+   },
+   "counts": {
+    "blocks": 25,
+    "w": 5,
+    "d": 5,
+    "ring": 16,
+    "walls": 192,
+    "floor": 9,
+    "storeys": 4,
+    "storeyHeight": 3,
+    "roof": 25,
+    "volume": 300,
+    "shell": 244,
+    "approx": false
+   },
+   "describe": "5 × 5 · 25 footprint · 12 high"
+  },
+  {
+   "object": {
+    "id": "b2",
+    "kind": "building",
+    "name": "Turned schematic",
+    "color": "#e85a4a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      9,
+      0
+     ],
+     [
+      9,
+      4
+     ],
+     [
+      0,
+      4
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 8,
+    "schematic": {
+     "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "file": "schematic",
+     "format": "sponge",
+     "size": [
+      5,
+      7,
+      10
+     ],
+     "turns": 3,
+     "mirror": true,
+     "blocks": 1235,
+     "materials": [
+      [
+       "minecraft:stone",
+       3
+      ],
+      [
+       "minecraft:oak_log",
+       0
+      ]
+     ]
+    },
+    "notes": "",
+    "author": "",
+    "createdAt": 16,
+    "updatedAt": 17
+   },
+   "counts": {
+    "blocks": 50,
+    "w": 10,
+    "d": 5,
+    "ring": 26,
+    "walls": 208,
+    "floor": 24,
+    "storeys": 2,
+    "storeyHeight": 4,
+    "roof": 50,
+    "volume": 400,
+    "shell": 282,
+    "approx": false
+   },
+   "describe": "10 × 5 · 7 high · 1,235 blocks (schematic)"
+  },
+  {
+   "object": {
+    "id": "b3",
+    "kind": "building",
+    "name": "Bad size",
+    "color": "#e85a4a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      3,
+      3
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 8,
+    "notes": "",
+    "author": "",
+    "createdAt": 18,
+    "updatedAt": 19
+   },
+   "counts": {
+    "blocks": 16,
+    "w": 4,
+    "d": 4,
+    "ring": 12,
+    "walls": 96,
+    "floor": 4,
+    "storeys": 2,
+    "storeyHeight": 4,
+    "roof": 16,
+    "volume": 128,
+    "shell": 116,
+    "approx": false
+   },
+   "describe": "4 × 4 · 16 footprint · 8 high"
+  },
+  {
+   "object": {
+    "id": "c1",
+    "kind": "path",
+    "name": "Has schematic but is a path",
+    "color": "#e8b04a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      5,
+      0
+     ]
+    ],
+    "y": 64,
+    "width": 5,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 20,
+    "updatedAt": 21
+   },
+   "counts": {
+    "blocks": 30,
+    "w": 6,
+    "d": 1,
+    "length": 5,
+    "approx": false
+   },
+   "describe": "5 long · 5 wide · 30 blocks"
+  },
+  {
+   "object": {
+    "id": "e1",
+    "kind": "area",
+    "name": "Empty",
+    "color": "#4ab0e8",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [],
+    "y": 64,
+    "width": 0,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 22,
+    "updatedAt": 23
+   },
+   "counts": {
+    "blocks": 0,
+    "w": 0,
+    "d": 0
+   },
+   "describe": "0 blocks · 0 × 0"
+  },
+  {
+   "object": {
+    "id": "huge",
+    "kind": "area",
+    "name": "Huge",
+    "color": "#4ab0e8",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      5000,
+      0
+     ],
+     [
+      5000,
+      5000
+     ],
+     [
+      0,
+      5000
+     ]
+    ],
+    "y": 64,
+    "width": 0,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 24,
+    "updatedAt": 25
+   },
+   "counts": {
+    "blocks": 25000000,
+    "w": 5001,
+    "d": 5001,
+    "approx": true
+   },
+   "describe": "≈25,000,000 blocks · 5001 × 5001"
+  },
+  {
+   "object": {
+    "id": "hugepath",
+    "kind": "path",
+    "name": "Huge path",
+    "color": "#e8b04a",
+    "status": "planned",
+    "dimension": "minecraft:overworld",
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      4100,
+      4100
+     ]
+    ],
+    "y": 64,
+    "width": 3,
+    "height": 0,
+    "notes": "",
+    "author": "",
+    "createdAt": 26,
+    "updatedAt": 27
+   },
+   "counts": {
+    "blocks": 17395,
+    "w": 4101,
+    "d": 4101,
+    "length": 5798,
+    "approx": true
+   },
+   "describe": "5,798 long · 3 wide · 17,395 blocks"
+  }
+ ]
+}
