@@ -13,8 +13,6 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.lab43.mcplanner.core.Access;
-import dev.lab43.mcplanner.core.AccessGate;
 import dev.lab43.mcplanner.core.ApiException;
 import dev.lab43.mcplanner.core.AuthStore;
 import dev.lab43.mcplanner.core.DeviceLogin;
@@ -30,6 +28,8 @@ import dev.lab43.mcplanner.core.PlanObject;
 import dev.lab43.mcplanner.core.PlanResponse;
 import dev.lab43.mcplanner.core.PlanSync;
 import dev.lab43.mcplanner.core.PlannerClient;
+import dev.lab43.mcplanner.core.Redactor;
+import dev.lab43.mcplanner.core.SessionErrors;
 import dev.lab43.mcplanner.core.Status;
 import dev.lab43.mcplanner.core.WorldInfo;
 
@@ -44,10 +44,10 @@ import net.minecraft.network.chat.Component;
  * Everything the mod knows and does, independent of screens and rendering: the signed-in Lab43 account, which plan is
  * shown (a shared world from app.mc-planner.com or a local .mcplan file), the plan itself, navigation and edits.
  *
- * <p>The mod needs an active MC Planner plan (docs/PLAN-mod-launch.md): a shared world shows while its OWNER's plan
- * is active (the server answers 402 for a paused world), a plan file only with the player's own plan
- * ({@link #filesAccess()}: /api/mod/me, checked at sign-in, every 30 minutes and when a file is opened, 72 hours offline
- * grace). {@link #gate()} says what keeps the chosen plan from showing.
+ * <p>The mod never checks anyone's MC Planner plan (Mojang's usage guidelines: a mod can't check whether a player has
+ * an out-of-game product or service that changes what it does in the game; docs/PLAN-mod-launch.md). Plan files open
+ * for everybody, without an account; a shared world shows for its members. A paused world (its owner's plan doesn't
+ * keep it live) shows read-only, as in the app.
  *
  * <p>All public methods are called on the game's main thread; network work runs on the core library's threads and
  * comes back through {@link #main}.
@@ -58,33 +58,20 @@ public final class Planner {
 
     public enum Source { NONE, ROOM, FILE }
 
-    /** What keeps the chosen plan from showing (the mod needs an active MC Planner plan). */
-    public enum Gate {
-        NONE,
-        /** a plan file, not signed in */
-        SIGN_IN,
-        /** a plan file, the first check is on its way */
-        CHECKING,
-        /** a plan file, no plan of their own */
-        NEEDS_PLAN,
-        /** a plan file, the last check is too old (offline > 72 h) or the plan's end has passed */
-        CHECK_AGAIN,
-        /** a shared world whose owner's plan ended */
-        PAUSED
-    }
-
     public final Minecraft mc;
     public final Path gameDir;
     public final Path configFile;
     public final Executor main;
     public final ScheduledExecutorService exec;
     public final AuthStore authStore;
-    /** the last check of the player's own plan (plan files), next to the token */
-    public final AccessGate.Store accessStore;
     /** the plan's schematic files found on this computer */
     public final Schematics schematics;
     public final PlanCache cache;
     public final String userAgent;
+    /** errors the mod caught in its own code this session (redacted, memory only) — for a crash report */
+    public final SessionErrors errors = new SessionErrors();
+    /** the menu's "Crash report" (sent only when the person presses Send) */
+    public final CrashReports crashReports;
 
     public ModConfig config;
     private HubClient hub;
@@ -97,14 +84,7 @@ public final class Planner {
     private DeviceLogin login;
     private DeviceLogin.State loginState;
     private final List<Consumer<DeviceLogin.State>> loginListeners = new ArrayList<>();
-
-    // the player's own plan (for plan files)
-    private AccessGate.Check accessCheck;
-    private long accessAttemptAt;
-    private boolean accessChecking;
-    private String accessError;
-    /** until when a waiting plan file is checked every minute (AccessGate.WAITING_WINDOW_MS) */
-    private long accessWaitUntil;
+    private boolean meLoading;
 
     // which plan
     private Source source = Source.NONE;
@@ -112,9 +92,7 @@ public final class Planner {
     private Path file;
     private LocalPlans.FileWatch watch;
     private String sourceName;
-    /** the chosen plan file is shown (false while it waits for a plan) */
-    private boolean fileLoaded;
-    /** the chosen shared world is paused (402): the server's message */
+    /** a server from before paused worlds were shown read-only refused the chosen world (402): its message */
     private String pausedMessage;
 
     // the plan
@@ -147,14 +125,15 @@ public final class Planner {
             return t;
         });
         this.authStore = new AuthStore(gameDir);
-        this.accessStore = AccessGate.Store.besides(authStore);
+        forgetOldPlanCheck(authStore);
         this.cache = new PlanCache(gameDir);
         this.schematics = new Schematics(this);
         this.userAgent = PlannerClient.userAgent(McPlannerClient.version(), SharedConstants.getCurrentVersion().name());
         this.config = ModConfig.load(configFile);
         rebuildClients();
         this.account = authStore.load(config.hubUrl);
-        this.accessCheck = account == null ? null : accessStore.load(config.hubUrl);
+        this.crashReports = new CrashReports(this);
+        crashReports.start();
     }
 
     public static Planner init(Minecraft mc) {
@@ -164,6 +143,21 @@ public final class Planner {
 
     public static Planner get() {
         return instance;
+    }
+
+    /** mod 0.2 kept the last check of the player's plan next to the token: no longer needed, so it's deleted */
+    private static void forgetOldPlanCheck(AuthStore auth) {
+        try {
+            Files.deleteIfExists(auth.primaryFile().resolveSibling("mcplanner-access.json"));
+        } catch (Exception e) {
+            LOG.debug("Could not delete the old plan check", e);
+        }
+    }
+
+    /** An error caught in the mod's own code: kept (redacted) for a crash report. Never throws. */
+    public static void noteError(String where, Throwable t) {
+        Planner p = instance;
+        if (p != null) p.errors.note(where, t);
     }
 
     private void rebuildClients() {
@@ -221,9 +215,7 @@ public final class Planner {
                 error = null;
                 navId = null;
                 planVersion++;
-                if (announce) toast("MC Planner", w != null && "owner".equals(w.role())
-                        ? "This world is paused: it isn't one of your live worlds. See MC Planner."
-                        : "This world is paused: its owner's plan doesn't keep it live.");
+                if (announce) toast("MC Planner", "This world is paused in MC Planner.");
             }
         });
         sync.setCache(cache);
@@ -289,9 +281,6 @@ public final class Planner {
             if (account == null) account = new AuthStore.Entry(config.hubUrl, s.token(), s.userId(), s.userName(), System.currentTimeMillis());
             login = null;
             toast("Signed in", "as " + accountName());
-            accessCheck = accessStore.load(config.hubUrl); // only counts if it's this person's (AccessGate.files)
-            accessError = null;
-            accessAttemptAt = 0;
             fetchMe();
             loadWorlds(true);
             if (source == Source.ROOM) sync.refreshNow();
@@ -300,31 +289,16 @@ public final class Planner {
         for (Consumer<DeviceLogin.State> l : List.copyOf(loginListeners)) l.accept(s);
     }
 
-    /** /api/mod/me: the account, and whether plan files may be opened (the player's own plan) */
+    /** /api/mod/me: the account's name and what the device may do */
     private void fetchMe() {
-        if (!isSignedIn() || accessChecking) return;
-        accessChecking = true;
-        accessAttemptAt = System.currentTimeMillis();
+        if (!isSignedIn() || meLoading) return;
+        meLoading = true;
         AuthStore.Entry asked = account;
         api.me().whenComplete((m, t) -> main.execute(() -> {
-            accessChecking = false;
+            meLoading = false;
             if (account != asked) return; // signed out (or in again) meanwhile
-            if (m != null) {
-                me = m;
-                accessError = null;
-                String uid = m.userId() != null ? m.userId() : account.userId();
-                // a server from before the access rule doesn't say: everything as before
-                accessCheck = new AccessGate.Check(uid, System.currentTimeMillis(), m.access() != null ? m.access() : Access.UNRESTRICTED);
-                accessStore.save(config.hubUrl, accessCheck);
-            } else {
-                ApiException e = ApiException.of(t);
-                if (e.isUnauthorized()) {
-                    signedOutRemotely();
-                    return;
-                }
-                accessError = e.getMessage();
-            }
-            accessChanged();
+            if (m != null) me = m;
+            else if (ApiException.of(t).isUnauthorized()) signedOutRemotely();
         }));
     }
 
@@ -344,119 +318,11 @@ public final class Planner {
 
     private void forgetAccount() {
         authStore.clear(config.hubUrl);
-        accessStore.clear(config.hubUrl);
         account = null;
         me = null;
-        accessCheck = null;
-        accessError = null;
-        accessAttemptAt = 0;
         worlds = List.of();
         worldsAt = 0;
         if (source == Source.ROOM) clearSource(false);
-        accessChanged();
-    }
-
-    // ------------------------------------------------------------------ the player's own plan (plan files)
-
-    /** May plan files be opened now? (Shared worlds go by their owner's plan instead: {@link #isPaused()}.) */
-    public AccessGate.State filesAccess() {
-        return AccessGate.files(isSignedIn(), account == null ? null : account.userId(), accessCheck, System.currentTimeMillis());
-    }
-
-    /** what the last check said about the player's own plan; null before the first check */
-    public Access access() {
-        return accessCheck == null ? null : accessCheck.access();
-    }
-
-    public long accessCheckedAt() {
-        return accessCheck == null ? 0 : accessCheck.checkedAt();
-    }
-
-    public boolean accessChecking() {
-        return accessChecking;
-    }
-
-    /** why the last check failed (offline, server trouble); null when it worked */
-    public String accessError() {
-        return accessError;
-    }
-
-    /** "Check again": the player's plan now (plan files), and a paused world's state */
-    public void checkAgain() {
-        expectPlanSoon();
-        fetchMe();
-        if (source == Source.ROOM) sync.refreshNow();
-    }
-
-    /** the player went to start a plan (or asked to check): look every minute for a while */
-    public void expectPlanSoon() {
-        accessWaitUntil = System.currentTimeMillis() + AccessGate.WAITING_WINDOW_MS;
-    }
-
-    /** the check's answer arrived (or the account changed): show or hide the plan file */
-    private void accessChanged() {
-        if (source != Source.FILE) return;
-        if (filesAccess() == AccessGate.State.ALLOWED) {
-            if (!fileLoaded) loadFile(true);
-        } else if (fileLoaded) {
-            fileLoaded = false;
-            plan = Plan.empty();
-            navId = null;
-            error = null;
-            planVersion++;
-            toast("Plan files need an MC Planner plan", gate() == Gate.CHECK_AGAIN ? "Connect to the internet so the mod can check yours (J → What now?)." : "J → What now?");
-        }
-    }
-
-    /** What keeps the chosen plan from showing. */
-    public Gate gate() {
-        if (source == Source.ROOM && pausedMessage != null) return Gate.PAUSED;
-        if (source != Source.FILE) return Gate.NONE;
-        return filesGate();
-    }
-
-    /** What keeps plan files from showing, whatever is shown now (NONE: they open). */
-    public Gate filesGate() {
-        return switch (filesAccess()) {
-            case ALLOWED -> Gate.NONE;
-            case SIGN_IN -> Gate.SIGN_IN;
-            case CHECKING -> Gate.CHECKING;
-            case NEEDS_PLAN -> Gate.NEEDS_PLAN;
-            case CHECK_AGAIN -> Gate.CHECK_AGAIN;
-        };
-    }
-
-    /** {@link #gate()} for people (one or two sentences); null when nothing blocks */
-    public String gateMessage() {
-        return gateMessage(gate());
-    }
-
-    public String gateMessage(Gate g) {
-        return switch (g) {
-            case NONE -> null;
-            case PAUSED -> pausedMessage;
-            case SIGN_IN -> "Plan files need an MC Planner plan. Sign in with your Lab43 account so the mod can check yours.";
-            case CHECKING -> accessError != null ? "Couldn't check your MC Planner plan: " + accessError : "Checking your MC Planner plan…";
-            case NEEDS_PLAN -> "Plan files need your own MC Planner plan: Cloud, Team, Lifetime or the free 7-day trial.";
-            case CHECK_AGAIN -> {
-                Access a = access();
-                long now = System.currentTimeMillis();
-                if (a != null && a.expiresAt() > 0 && now >= a.expiresAt()) yield "Your MC Planner plan has reached its end date. Checking whether it goes on…";
-                yield "Your MC Planner plan was last checked " + Texts.ago(accessCheckedAt()) + ". Connect to the internet so the mod can check it again.";
-            }
-        };
-    }
-
-    /** {@link #gate()} in a word or two (HUD) */
-    public String gateLabel() {
-        return switch (gate()) {
-            case NONE -> null;
-            case PAUSED -> "paused";
-            case SIGN_IN -> "sign in";
-            case CHECKING -> "checking…";
-            case NEEDS_PLAN -> "needs a plan";
-            case CHECK_AGAIN -> "check needed";
-        };
     }
 
     // ------------------------------------------------------------------ shared worlds
@@ -512,16 +378,14 @@ public final class Planner {
 
     public void selectRoom(WorldInfo w) {
         if (source == Source.ROOM && w.roomId().equals(roomId)) {
-            sync.select(roomId); // already shown: refresh only (keeps the plan, or the pause)
+            sync.select(roomId); // already shown: refresh only
             return;
         }
         stopWatch();
         source = Source.ROOM;
         roomId = w.roomId();
         file = null;
-        fileLoaded = false;
-        // the list says it's paused: say so at once and don't draw a saved copy meanwhile; the server has the last word
-        pausedMessage = w.paused() ? pausedText(w) : null;
+        pausedMessage = null;
         sourceName = w.name();
         plan = Plan.empty();
         meta = null;
@@ -532,10 +396,7 @@ public final class Planner {
         remember(ModConfig.roomRef(roomId));
     }
 
-    /**
-     * Show a plan file. It's remembered for this world either way; it only loads while the player's own plan allows
-     * it ({@link #filesAccess()}) — otherwise {@link #gate()} says why, and it loads by itself once the check says yes.
-     */
+    /** Show a plan file (remembered for this world). It is read again whenever it changes on disk. */
     public void selectFile(Path path) {
         stopWatch();
         sync.clear();
@@ -546,13 +407,10 @@ public final class Planner {
         plan = Plan.empty();
         meta = null;
         error = null;
-        fileLoaded = false;
         pausedMessage = null;
         planVersion++;
         remember(ModConfig.fileRef(file));
-        expectPlanSoon();
-        if (filesAccess() == AccessGate.State.ALLOWED) loadFile(true);
-        fetchMe(); // opening a file checks the plan again (does nothing when not signed in or already asking)
+        loadFile(true);
         watch = new LocalPlans.FileWatch(file);
         Path watched = file;
         watch.start(exec, () -> main.execute(() -> {
@@ -561,15 +419,12 @@ public final class Planner {
     }
 
     private void loadFile(boolean announce) {
-        if (filesAccess() != AccessGate.State.ALLOWED) return;
         Path p = file;
         exec.execute(() -> {
             try {
                 Plan loaded = LocalPlans.load(p);
                 main.execute(() -> {
                     if (source != Source.FILE || !p.equals(file)) return;
-                    if (filesAccess() != AccessGate.State.ALLOWED) return; // the plan ran out meanwhile
-                    fileLoaded = true;
                     plan = loaded;
                     planAt = System.currentTimeMillis();
                     error = null;
@@ -598,7 +453,6 @@ public final class Planner {
         meta = null;
         error = null;
         navId = null;
-        fileLoaded = false;
         pausedMessage = null;
         planVersion++;
         if (forgetChoice) remember(null);
@@ -612,10 +466,7 @@ public final class Planner {
     public void refresh() {
         schematics.rescan();
         if (source == Source.ROOM) sync.refreshNow();
-        else if (source == Source.FILE) {
-            if (filesAccess() == AccessGate.State.ALLOWED) loadFile(false);
-            else fetchMe();
-        }
+        else if (source == Source.FILE) loadFile(false);
     }
 
     private void remember(String ref) {
@@ -650,16 +501,22 @@ public final class Planner {
         return meta == null ? null : meta.role();
     }
 
-    /** the shown shared world is paused: its owner's plan ended (nothing is shown then) */
+    /** the shown shared world is paused: its owner's plan doesn't keep it live (read-only, as in the app) */
     public boolean isPaused() {
         return pausedMessage != null || (meta != null && meta.paused());
     }
 
-    /** why a world is paused, before the server says it in its own words */
+    /** why a world is paused, in words for the player */
     private static String pausedText(WorldInfo w) {
         return w != null && "owner".equals(w.role())
-                ? "This world is paused: it isn't one of your live worlds (your plan ended, or it keeps fewer worlds live)."
-                : "This world is paused: its owner's MC Planner plan doesn't keep it live right now.";
+                ? "This world is paused in MC Planner, so it's read-only. Make it live again in the app."
+                : "This world is paused in MC Planner, so it's read-only.";
+    }
+
+    /** a paused world's notice (null when the shown world isn't paused) */
+    public String pausedNotice() {
+        if (!isPaused()) return null;
+        return pausedMessage != null ? pausedMessage : pausedText(world());
     }
 
     /** the shown world's entry in the list of shared worlds, or null */
@@ -678,7 +535,7 @@ public final class Planner {
         if (source == Source.FILE) return "Plan files are read-only in Minecraft. Change them in MC Planner.";
         if (source != Source.ROOM) return "No plan loaded.";
         if (!isSignedIn()) return "Sign in to change the plan.";
-        if (isPaused()) return pausedMessage != null ? pausedMessage : "This world is paused: its owner's MC Planner plan ended.";
+        if (isPaused()) return pausedNotice();
         if (meta != null && "viewer".equals(meta.role())) return "You're a viewer in this world. You can only look.";
         if (!canWriteScope()) return "Sign in again to allow changes.";
         return null;
@@ -824,6 +681,20 @@ public final class Planner {
         return sd == null ? null : sd.name;
     }
 
+    /** Names a crash report leaves out: this world or server, the plan, its objects and file, the Lab43 account. */
+    void addKnownNames(Redactor.Builder b) {
+        b.world(levelName());
+        ServerData sd = mc.getCurrentServer();
+        if (sd != null) b.server(sd.name).server(sd.ip);
+        if (context != null && context.startsWith("sp:")) b.world(context.substring(3));
+        if (context != null && context.startsWith("mp:")) b.server(context.substring(3));
+        if (isSignedIn()) b.name(accountName());
+        b.name(sourceName);
+        if (file != null) b.name(file.getFileName().toString()).name(fileTitle(file));
+        b.name(plan.worldName);
+        for (PlanObject o : plan.objects()) b.name(o.name).name(o.groupName).name(o.author).name(o.sourceUrl);
+    }
+
     public boolean inWorld() {
         return mc.level != null && mc.player != null;
     }
@@ -836,15 +707,7 @@ public final class Planner {
 
     /** Every client tick. */
     public void tick() {
-        if (inWorld()) {
-            schematics.tick();
-            // the player's own plan: every 30 minutes, every minute while a plan file waits for one
-            long now = System.currentTimeMillis();
-            boolean waiting = source == Source.FILE && now < accessWaitUntil && filesAccess() != AccessGate.State.ALLOWED;
-            if (isSignedIn() && !accessChecking && AccessGate.recheckDue(accessAttemptAt, waiting, now)) fetchMe();
-            // offline grace or the plan's end ran out while playing
-            if (source == Source.FILE && fileLoaded && filesAccess() != AccessGate.State.ALLOWED) accessChanged();
-        }
+        if (inWorld()) schematics.tick();
         if (source == Source.ROOM) {
             boolean want = shouldSync();
             if (sync.isActive() != want) sync.setActive(want);

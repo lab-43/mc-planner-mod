@@ -22,13 +22,13 @@ import java.util.concurrent.TimeUnit;
  *       error changes, {@link Listener#onRecovered} when it works again.</li>
  *   <li>401 → {@link Listener#onUnauthorized} and 403/404 → {@link Listener#onLost}; polling then stops until
  *       {@link #refreshNow()} or {@link #select} is called again.</li>
- *   <li>402 (the world is paused: its owner's plan ended) → {@link Listener#onPaused}: the plan is dropped (also from
- *       the offline cache) and polling goes on slowly ({@code pausedPollMs}, 5 minutes) until the world is live again,
- *       which arrives as a normal {@link Listener#onPlan}.</li>
+ *   <li>A paused world comes as a normal plan with {@code paused: true} (shown read-only). Servers from before that
+ *       answered 402 instead → {@link Listener#onPaused}: the plan is dropped (also from the offline cache) and polling
+ *       goes on slowly ({@code pausedPollMs}, 5 minutes) until the world is live again, which arrives as a normal
+ *       {@link Listener#onPlan}.</li>
  *   <li>Every listener call is posted to {@code mainThread}.</li>
- *   <li>With {@link #setCache a cache}, a newly selected world first shows the last saved plan (offline), and
- *       every fresh plan is saved in the background. A saved plan older than {@code maxCacheAgeMs} (72 hours, like
- *       the offline grace of plan files) isn't shown; a 304 refreshes its age at most once an hour.</li>
+ *   <li>With {@link #setCache a cache}, a newly selected world first shows the last saved plan (offline), however
+ *       old it is, and every fresh plan is saved in the background; a 304 refreshes its age at most once an hour.</li>
  * </ul>
  */
 public final class PlanSync {
@@ -51,8 +51,8 @@ public final class PlanSync {
         default void onRecovered() {}
 
         /**
-         * The world is paused (402: its owner's MC Planner plan ended) — nothing may be shown. Called once per pause;
-         * when it's live again the plan comes through {@link #onPlan}.
+         * The world is paused and a server from before read-only paused worlds refused it (402). Called once per
+         * pause; when it's live again the plan comes through {@link #onPlan}.
          */
         default void onPaused(String message) {}
     }
@@ -64,8 +64,8 @@ public final class PlanSync {
     long maxBackoffMs = 120_000;
     /** how often a paused world is asked again */
     long pausedPollMs = 5 * 60_000;
-    /** the offline cache shows plans saved at most this long ago */
-    long maxCacheAgeMs = AccessGate.GRACE_MS;
+    /** a saved plan dated further ahead than this was saved by a clock that has since gone back: not shown */
+    static final long CLOCK_SLACK_MS = 3600_000;
     /** a 304 marks the cached plan as still current at most this often */
     long cacheTouchMs = 3600_000;
 
@@ -259,8 +259,8 @@ public final class PlanSync {
             if (g != gen) return;
             inFlight = false;
             long age = cached == null ? 0 : System.currentTimeMillis() - cached.savedAt();
-            if (cached != null && (age > maxCacheAgeMs || age < -AccessGate.CLOCK_SLACK_MS)) {
-                LOG.debug("Not showing the saved plan of {}: saved {} h ago", room, age / 3600_000);
+            if (cached != null && age < -CLOCK_SLACK_MS) {
+                LOG.debug("Not showing the saved plan of {}: saved {} h in the future", room, -age / 3600_000);
                 cached = null;
             }
             if (cached != null && plan == null) {

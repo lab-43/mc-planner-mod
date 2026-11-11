@@ -255,19 +255,20 @@ final class PlanSyncTest {
             eq(null, after.get(after.size() - 1).header("If-None-Match"), "asked without an etag");
             sync2.clear();
 
-            // a saved plan older than the offline grace (72 h) isn't shown
+            // a saved plan shows however old it is (the mod checks nobody's plan); one dated ahead by a clock that
+            // went back since doesn't
             cache.save("r2", LocalFilesTest.wrapper("5"), "e5");
-            setSavedAt(cache, "r2", System.currentTimeMillis() - AccessGate.GRACE_MS - 60_000);
+            setSavedAt(cache, "r2", System.currentTimeMillis() + PlanSync.CLOCK_SLACK_MS + 3600_000);
             Events ev3 = new Events();
             PlanSync sync3 = new PlanSync(client, exec, main, ev3);
             sync3.setCache(cache);
             sync3.select("r2");
             Thread.sleep(200);
-            eq(0, ev3.count("plan"), "too old: not shown");
-            setSavedAt(cache, "r2", System.currentTimeMillis() - AccessGate.GRACE_MS + 3600_000);
+            eq(0, ev3.count("plan"), "saved in the future: not shown");
+            setSavedAt(cache, "r2", System.currentTimeMillis() - 30L * 24 * 3600_000);
             sync3.clear();
             sync3.select("r2");
-            check(TestMain.waitFor(() -> ev3.count("plan") == 1, 3000), "71 h old: shown");
+            check(TestMain.waitFor(() -> ev3.count("plan") == 1, 3000), "30 days old: shown");
             check(ev3.meta.fromCache(), "from the cache");
             sync3.clear();
         } finally {

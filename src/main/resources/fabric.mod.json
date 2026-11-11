@@ -3,7 +3,7 @@
   "id": "mcplanner",
   "version": "${version}",
   "name": "MC Planner",
-  "description": "See your MC Planner plans in Minecraft: paths, areas, buildings and markers from app.mc-planner.com (or a .mcplan file) as an overlay in the world. Sign in with your Lab43 account, navigate to what's next, mark it done. Client-side, works on any server.",
+  "description": "See your MC Planner plans in Minecraft: paths, areas, buildings and markers from app.mc-planner.com (or a .mcplan file) as an overlay in the world. Free for everybody: plan files need no account, shared worlds a free Lab43 account. Navigate to what's next, mark it done. Client-side, works on any server.",
   "authors": ["Lab43"],
   "contact": {
     "homepage": "https://www.mc-planner.com/mod",

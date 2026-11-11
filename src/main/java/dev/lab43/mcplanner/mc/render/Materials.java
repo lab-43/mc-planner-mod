@@ -85,6 +85,7 @@ final class Materials {
                 atlas = now.getParticleMaterial(Blocks.STONE.defaultBlockState()).sprite().atlasLocation();
             } catch (RuntimeException e) {
                 Planner.LOG.warn("MC Planner: couldn't find the block atlas", e);
+                Planner.noteError("textures: the block atlas", e);
             }
         }
     }
@@ -133,6 +134,7 @@ final class Materials {
             r = load(id, depth);
         } catch (RuntimeException e) {
             Planner.LOG.warn("MC Planner: couldn't read the textures of {}", id, e);
+            Planner.noteError("textures: a block", e);
         }
         cache.put(id, Optional.ofNullable(r));
         return r;

@@ -5,6 +5,12 @@ New changes go under "Unreleased"; `pnpm release:mod <version>` turns it into th
 
 ## Unreleased
 
+## 0.3.0 — 2026-11-11
+
+- **Free for everybody:** the mod no longer checks for an MC Planner plan. Plan files open without an account, and shared worlds show for everyone in them. Paused worlds show read-only instead of nothing. (Mojang's rules for mods don't allow a mod to check for a paid plan.)
+- Offline, the last saved copy of a shared world shows however old it is.
+- **Crash report:** when Minecraft crashed with the mod in the crash, or the mod hit an error, the menu (J) offers Crash report. It shows the whole report first, without your name, worlds or servers, and sends it to Lab43 only if you press Send.
+
 ## 0.2.0 — 2026-10-02
 
 - First public release: see your MC Planner plans inside Minecraft — paths, areas, buildings and markers on the terrain, each with a label.

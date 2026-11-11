@@ -50,12 +50,7 @@ public final class Hud {
         String name = planner.sourceName() == null ? "Plan" : planner.sourceName();
         String state;
         int dot;
-        String gate = planner.gateLabel();
-        if (gate != null) {
-            // nothing is drawn: say why (J → "What now?")
-            state = gate + " · J";
-            dot = 0xFFFFC857;
-        } else if (planner.error() != null) {
+        if (planner.error() != null) {
             state = "offline";
             dot = 0xFFFF7A6B;
         } else if (planner.isOffline()) {
@@ -65,7 +60,7 @@ public final class Hud {
             state = "file";
             dot = 0xFF9AD0FF;
         } else {
-            state = planner.isPaused() ? "paused" : "live";
+            state = planner.isPaused() ? "paused, read-only" : "live";
             dot = planner.isPaused() ? 0xFFFFC857 : 0xFF7BE07B;
         }
         lines.add(new Line("● ", dot, Texts.ellipsize(name, 28) + "  ", 0xFFFFFFFF, state + (c.overlay ? "" : " · hidden"), 0xFFA0A0A0));

@@ -34,10 +34,10 @@ final class PlannerClientTest {
             Me flat = TestMain.await(c.me());
             eq(new Me("u-2", "Flat", null, List.of("a", "b")), flat, "flat me shape");
             check(!flat.canWrite(), "no write scope");
-            eq(null, flat.access(), "no access field (server before the access rule)");
+            // a server from before the mod stopped asking about plans still sends "access": ignored
             s.on("GET", "/api/mod/me", r -> FakeServer.Reply.json(200, "{\"user\":{\"id\":\"u-3\"},\"scopes\":[\"mcplanner:read\"],"
                 + "\"access\":{\"active\":false,\"plan\":\"free\",\"name\":\"Free\",\"source\":\"free\",\"expiresAt\":null,\"trialAvailable\":true,\"files\":false}}"));
-            eq(new Access(false, "free", "Free", "free", 0, true, false), TestMain.await(c.me()).access(), "access from /me");
+            eq(new Me("u-3", null, null, List.of("mcplanner:read")), TestMain.await(c.me()), "an old server's access field is ignored");
 
             // a paused world: 402 with the server's message and code
             s.on("GET", "/api/mod/worlds/r402/plan", r -> FakeServer.Reply.json(402,

@@ -29,6 +29,12 @@ public final class PlannerScreen extends BaseScreen {
         ModConfig c = p.config;
         int l = left(), w = panelW(), y = 34;
         button("Help", l + w - 40, 6, 40, "How the mod works (mc-planner.com/academy)", b -> ConfirmLinkScreen.confirmLinkNow(this, Links.HELP, true));
+        if (p.crashReports.available()) {
+            button("Crash report", l, 6, 80, p.crashReports.isCrash()
+                    ? "Minecraft crashed last time, with the mod in the crash. See the report, and send it to Lab43 if you like."
+                    : "The mod hit an error this session. See the report, and send it to Lab43 if you like.",
+                    b -> minecraft.gui.setScreen(new CrashReportScreen(this)));
+        }
 
         // account
         if (p.isSignedIn()) button("Sign out", l + w - 76, y, 76, "Disconnect this device from your Lab43 account", b -> p.signOut());
@@ -91,12 +97,11 @@ public final class PlannerScreen extends BaseScreen {
     }
 
     private void fillRows() {
-        Planner.Gate gate = p.gate();
-        if (gate != Planner.Gate.NONE) {
-            rows.add(new Rows.Row(0xFFFFC857, PlanNeededScreen.titleFor(gate), ACCENT, p.gateMessage(),
-                    gate == Planner.Gate.CHECKING ? "…" : "What now?", ACCENT, () -> minecraft.gui.setScreen(new PlanNeededScreen(this))));
-            rows.empty = "";
-            return;
+        // a paused world shows read-only: say so above its objects
+        String paused = p.pausedNotice();
+        if (paused != null) {
+            rows.add(new Rows.Row(0xFFFFC857, "Paused: read-only", ACCENT, paused, "Why?", ACCENT,
+                    () -> ConfirmLinkScreen.confirmLinkNow(this, Links.PAUSED, true)));
         }
         if (p.source() == Planner.Source.NONE) {
             rows.empty = p.isSignedIn()
@@ -174,12 +179,8 @@ public final class PlannerScreen extends BaseScreen {
                 if (p.role() != null) sb.append(Texts.roleLabel(p.role()));
                 if (p.isPaused()) sb.append(sb.length() > 0 ? " · " : "").append("paused");
             }
-            if (p.gate() != Planner.Gate.NONE) {
-                if (p.gate() != Planner.Gate.PAUSED) sb.append(sb.length() > 0 ? " · " : "").append(p.gateLabel());
-            } else {
-                sb.append(sb.length() > 0 ? " · " : "").append(Planner.countLabel(p.plan()));
-                if (p.planAt() > 0) sb.append(" · updated ").append(Texts.ago(p.planAt()));
-            }
+            sb.append(sb.length() > 0 ? " · " : "").append(Planner.countLabel(p.plan()));
+            if (p.planAt() > 0) sb.append(" · updated ").append(Texts.ago(p.planAt()));
             int nameW = font.width(name) + 6;
             g.text(font, Rows.clip(font, name, w - 90), l, y + 11, WHITE, false);
             int detailX = l + Math.min(nameW, w - 90);

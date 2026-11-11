@@ -67,7 +67,7 @@ public final class PlannerClient {
                 String scope = Json.str(o, "scope");
                 if (scope != null) for (String s : scope.trim().split("\\s+")) if (!s.isEmpty()) scopes.add(s);
             }
-            return new Me(id, name, color, Collections.unmodifiableList(scopes), Access.parse(Json.get(o, "access")));
+            return new Me(id, name, color, Collections.unmodifiableList(scopes));
         });
     }
 

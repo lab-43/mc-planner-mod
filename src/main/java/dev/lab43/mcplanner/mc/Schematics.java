@@ -133,6 +133,7 @@ public final class Schematics {
                 }
             } catch (RuntimeException ex) {
                 Planner.LOG.warn("MC Planner: looking for schematic files failed", ex);
+                Planner.noteError("schematic files", ex);
             }
             Map<String, Path> where = found;
             planner.main.execute(() -> {
@@ -151,7 +152,7 @@ public final class Schematics {
                         e.state = State.READY;
                         if (changed) {
                             version++;
-                            Planner.LOG.info("MC Planner: showing schematic {} from {}", names.get(h), e.file);
+                            Planner.LOG.info("MC Planner: showing a schematic ({})", h.substring(0, Math.min(8, h.length())));
                         }
                     } else if (r instanceof String msg) {
                         e.file = where.get(h);

@@ -9,13 +9,12 @@ import java.util.List;
  * @param name   display name
  * @param color  person colour 0xRRGGBB (nullable)
  * @param scopes what the device token may do: {@link #SCOPE_READ}, {@link #SCOPE_WRITE} (never null)
- * @param access the person's own MC Planner plan (plan files); null when the server doesn't say (before the access
- *               rule) — then everything works as before ({@link Access#UNRESTRICTED})
+ *
+ * <p>The mod never asks about the person's MC Planner plan (Mojang's usage guidelines: a mod can't check whether a
+ * player has an out-of-game product or service that changes what it does in the game). Servers from before that
+ * change also send an {@code access} field; it is ignored.
  */
-public record Me(String userId, String name, Integer color, List<String> scopes, Access access) {
-    public Me(String userId, String name, Integer color, List<String> scopes) {
-        this(userId, name, color, scopes, null);
-    }
+public record Me(String userId, String name, Integer color, List<String> scopes) {
 
     /** May read plans (every working device token has it). */
     public static final String SCOPE_READ = "mcplanner:read";

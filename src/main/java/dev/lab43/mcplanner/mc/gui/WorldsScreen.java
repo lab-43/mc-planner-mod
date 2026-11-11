@@ -4,7 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import dev.lab43.mcplanner.core.AccessGate;
 import dev.lab43.mcplanner.core.LocalPlanFile;
 import dev.lab43.mcplanner.core.LocalPlans;
 import dev.lab43.mcplanner.core.WorldInfo;
@@ -46,14 +45,12 @@ public final class WorldsScreen extends BaseScreen {
                 boolean current = p.source() == Planner.Source.ROOM && wi.roomId().equals(p.roomId());
                 boolean owner = "owner".equals(wi.role());
                 String detail = Texts.roleLabel(wi.role()) + (wi.ownerName() != null && !owner ? " · " + wi.ownerName() + "'s world" : "")
-                        + (wi.paused() ? (owner ? " · Paused — not one of your live worlds" : " · Paused — the owner's plan doesn't keep it live") : wi.canEdit() ? "" : " · read-only");
-                // paused worlds: greyed out, nothing to show until the owner renews (the server answers 402)
-                rows.add(new Rows.Row(wi.paused() ? 0xFF6E6E6E : 0xFF7BE07B, (current ? "● " : "") + (wi.name() == null ? "World" : wi.name()),
-                        wi.paused() ? DIM : current ? ACCENT : WHITE, detail, wi.paused() ? "paused" : current ? "shown" : "Show",
-                        wi.paused() ? ACCENT : current ? OK : GREY, () -> {
+                        + (wi.paused() ? " · Paused, read-only" : wi.canEdit() ? "" : " · read-only");
+                // a paused world shows read-only, as in the app
+                rows.add(new Rows.Row(wi.paused() ? 0xFFFFC857 : 0xFF7BE07B, (current ? "● " : "") + (wi.name() == null ? "World" : wi.name()),
+                        current ? ACCENT : WHITE, detail, current ? "shown" : "Show", current ? OK : GREY, () -> {
                             p.selectRoom(wi);
-                            if (wi.paused()) minecraft.gui.setScreen(new PlanNeededScreen(parent));
-                            else onClose();
+                            onClose();
                         }));
             }
         } else {
@@ -63,17 +60,6 @@ public final class WorldsScreen extends BaseScreen {
         }
         rows.add(new Rows.Row(0, "", 0, null, null, 0, null));
         rows.add(new Rows.Row(0, "Plan files", ACCENT, null, null, 0, null));
-        AccessGate.State filesAccess = p.filesAccess();
-        if (filesAccess != AccessGate.State.ALLOWED) {
-            String why = switch (filesAccess) {
-                case SIGN_IN -> "Plan files need your own MC Planner plan. Sign in so the mod can check it.";
-                case CHECKING -> "Checking your MC Planner plan…";
-                case CHECK_AGAIN -> "Your plan needs checking again (offline too long, or its end date passed).";
-                default -> "Plan files need your own MC Planner plan: Cloud, Team, Lifetime or the free 7-day trial.";
-            };
-            rows.add(new Rows.Row(0xFFFFC857, "Plan files need an MC Planner plan", ACCENT, why, "Why?", ACCENT,
-                    () -> minecraft.gui.setScreen(new PlanNeededScreen(this, true))));
-        }
         if (files.isEmpty()) {
             rows.add(new Rows.Row(0, "No .mcplan files found yet.", GREY, "Save with Ctrl+S in MC Planner, or drop a file on this window.", null, 0, null));
         }
@@ -133,10 +119,9 @@ public final class WorldsScreen extends BaseScreen {
         if (note == null) note = "Drop a .mcplan file from MC Planner.";
     }
 
-    /** a plan file was chosen: back to the game, or to why it can't show yet */
+    /** a plan file was chosen: back to the game */
     private void afterFile() {
-        if (p.gate() != dev.lab43.mcplanner.mc.Planner.Gate.NONE) minecraft.gui.setScreen(new PlanNeededScreen(parent));
-        else onClose();
+        onClose();
     }
 
     // what the rows were built from: the world list arrives (or fails) a moment after the screen opens

@@ -57,7 +57,8 @@ test("manifest the website reads", () => {
   assert.equal(m.date, "2026-10-02T10:00:00.000Z");
   const body = releaseBody(m);
   assert.match(body, /^- First\./);
-  assert.match(body, /active MC Planner plan/, "the release text says a plan is needed");
+  assert.match(body, /free for everybody and checks no MC Planner plan/, "the release text says the mod is free");
+  assert.doesNotMatch(body, /active MC Planner plan|7-day trial|Cloud, Team/, "never that a plan is needed (Mojang's usage guidelines)");
   assert.match(body, /Not an official Minecraft product/);
   assert.match(body, /modrinth\.com\/mod\/mc-planner/);
   assert.equal(buildManifest({ props, tag: "v0.2.0", repo: "x/y", jar, notes: "n" }).modrinth, undefined, "no Modrinth link until there is one");

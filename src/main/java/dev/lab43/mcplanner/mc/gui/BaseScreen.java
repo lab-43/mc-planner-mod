@@ -26,7 +26,7 @@ abstract class BaseScreen extends Screen {
     private int seenVersion;
     private boolean seenSignedIn;
     private Planner.Source seenSource;
-    private Planner.Gate seenGate;
+    private boolean seenPaused;
     private boolean dirty;
 
     protected BaseScreen(String title, Screen parent) {
@@ -88,7 +88,7 @@ abstract class BaseScreen extends Screen {
         seenVersion = p.planVersion();
         seenSignedIn = p.isSignedIn();
         seenSource = p.source();
-        seenGate = p.gate();
+        seenPaused = p.isPaused();
     }
 
     /**
@@ -104,7 +104,7 @@ abstract class BaseScreen extends Screen {
     public void tick() {
         super.tick();
         if (p == null) return;
-        if (dirty || p.planVersion() != seenVersion || p.isSignedIn() != seenSignedIn || p.source() != seenSource || p.gate() != seenGate) {
+        if (dirty || p.planVersion() != seenVersion || p.isSignedIn() != seenSignedIn || p.source() != seenSource || p.isPaused() != seenPaused) {
             dirty = false;
             remember();
             double keep = rows == null ? 0 : rows.scroll;

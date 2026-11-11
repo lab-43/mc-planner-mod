@@ -33,13 +33,13 @@ public final class TestMain {
         suite("Model", ModelTest::run);
         suite("ModConfig", ModConfigTest::run);
         suite("AuthStore", AuthStoreTest::run);
-        suite("Access (plan files need a plan)", AccessTest::run);
         suite("PlanCache + LocalPlans", LocalFilesTest::run);
         suite("HubClient", HubClientTest::run);
         suite("DeviceLogin", DeviceLoginTest::run);
         suite("PlannerClient", PlannerClientTest::run);
         suite("PlanSync", PlanSyncTest::run);
         suite("Schematic files", SchematicTest::run);
+        suite("Crash reports", CrashTest::run);
         System.out.println();
         System.out.printf("%d checks passed, %d failed (%.1f s)%n", passed, failed, (System.currentTimeMillis() - t0) / 1000.0);
         if (failed > 0) {

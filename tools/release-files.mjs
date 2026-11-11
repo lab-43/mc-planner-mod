@@ -83,7 +83,7 @@ export function releaseBody(m) {
   return [
     m.notes,
     "",
-    "**What you need:** Minecraft: Java Edition " + m.minecraft.join(", ") + " with Fabric Loader and Fabric API, and an active MC Planner plan (Cloud, Team, Lifetime or the 7-day trial) — yours, or the one of the friend whose shared world you're in.",
+    "**What you need:** Minecraft: Java Edition " + m.minecraft.join(", ") + " with Fabric Loader and Fabric API, and a plan from MC Planner: a plan file (no account needed) or a shared world you're in (a free Lab43 account). The mod is free for everybody and checks no MC Planner plan.",
     "",
     ...(m.modrinth ? [`Get it on Modrinth: ${m.modrinth}`, ""] : []),
     `SHA-512 \`${m.file.sha512}\``,

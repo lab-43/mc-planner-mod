@@ -5,10 +5,9 @@ from app.mc-planner.com, or from a `.mcplan` file, drawn as an overlay in the wo
 walk to what's next, and mark it done. The mod runs on the client only and works on any server (the server needs
 nothing).
 
-**The mod needs an active MC Planner plan** (Cloud, Team, Lifetime, or the 7-day free trial). In a shared world it's
-the plan of the world's owner that counts, so friends you invite play for free. Without a plan the mod shows how to
-start the trial and draws nothing. More: [mc-planner.com/mod](https://www.mc-planner.com/mod) ·
-[how the mod works](https://www.mc-planner.com/academy/mod).
+**The mod is free and works for everybody.** Plan files open without an account; shared worlds need a free Lab43
+account and an invite to the world. The mod never checks whether you have an MC Planner plan. More:
+[mc-planner.com/mod](https://www.mc-planner.com/mod) · [how the mod works](https://www.mc-planner.com/academy/mod).
 
 | | |
 |---|---|
@@ -79,17 +78,23 @@ Profile → ⋯ → Open folder → `mods`.
    Friends in the app see the change at once. The mod fetches the plan every 10 s (only what changed, using an
    ETag). Plan files reload by themselves when the app saves them again.
 
-**Which plan counts.** Shared worlds show while their **owner** has an active MC Planner plan; friends they invited
-need none of their own. A paused world (the owner's plan ended) is greyed out in the list and nothing of it is drawn;
-it comes back by itself when the owner renews. **Plan files** need your **own** plan (Cloud, Team, Lifetime or the
-7-day trial). The mod asks the server at sign-in, every 30 minutes and when you open a file, and trusts the last answer
-for 72 hours offline, never past the plan's end date. Without a plan, J → **What now?** offers the free trial, the
-plans and **Check again** (while a file waits, the mod also checks every minute). **Help** at the top of the menu opens
-the guide on mc-planner.com.
+**No plan check.** The mod never asks about anyone's MC Planner plan: Mojang's usage guidelines don't let a mod check
+whether a player has an out-of-game product or service that changes what it does in the game. Plan files open for
+everybody, without an account. Shared worlds show for their members. A paused world (in MC Planner, its owner's plan
+doesn't keep it live) shows read-only, as it does in the app; it's editable again when it's live. Offline, the last
+saved copy of a shared world shows however old it is. **Help** at the top of the menu opens the guide on
+mc-planner.com.
+
+**Crash report.** When Minecraft crashed with the mod in the crash (found in `crash-reports/` when the game starts), or
+the mod caught an error in its own code, the menu shows **Crash report** at the top left. It shows the whole report:
+Minecraft's crash report, the errors, versions, the GPU, the mod's settings and the log's lines about the mod, with the
+player's name and id, tokens, the home folder, IP addresses, emails and world and server names taken out. **Send to
+Lab43** posts it once to auth.lab43.dev (no sign-in key); nothing is sent without that click. Send or Don't send, the
+same crash isn't offered again (`crashReportSeen` in `config/mcplanner.json`).
 
 Settings are in `config/mcplanner.json` (Display… in the menu). The sign-in token is stored **outside** the instance,
-in `~/.lab43/mcplanner-minecraft.json` (the last plan check next to it, `mcplanner-access.json`), so exporting or
-sharing a modpack never includes them. The last copy of each plan
+in `~/.lab43/mcplanner-minecraft.json`, so exporting or sharing a modpack never includes it. (0.2.0 kept a plan check
+next to it, `mcplanner-access.json`; the mod deletes that file when it starts.) The last copy of each plan
 is kept in `<instance>/mcplanner/cache/`, so the overlay also works offline.
 
 ## Build
@@ -112,7 +117,7 @@ Gradle.
 
 | Path | What |
 |---|---|
-| `core/` | Version-independent, plain Java 17 + Gson. The plan model and parser (a port of the web app's TypeScript plan model; the parity fixtures in `src/test/resources/fixtures` come from it — `tools/gen-fixtures.ts` only runs inside the monorepo), the hub device sign-in (`HubClient`, `DeviceLogin`), the mod API client (`PlannerClient`), polling (`PlanSync`, 402 = paused world), the plan check for plan files (`Access`, `AccessGate`: offline grace), config, token storage, local files, cache. Will be reused unchanged for older Minecraft versions |
+| `core/` | Version-independent, plain Java 17 + Gson. The plan model and parser (a port of the web app's TypeScript plan model; the parity fixtures in `src/test/resources/fixtures` come from it — `tools/gen-fixtures.ts` only runs inside the monorepo), the hub device sign-in (`HubClient`, `DeviceLogin`), the mod API client (`PlannerClient`), polling (`PlanSync`; a paused world comes read-only, servers before 2026-11-11 answered 402), config, token storage, local files, cache. Will be reused unchanged for older Minecraft versions |
 | `mc/` | Minecraft 26.x. `McPlannerClient` (entrypoint, keys, events), `Planner` (state: account, source, plan, navigation, edits), `Hud`, `Commands`, `render/` (`Shape` → `Mesh` → gizmos + fills; `Materials` = block textures), `gui/` (screens), `compat/ModMenuEntry` |
 
 Drawing goes through Minecraft's own render API, no raw OpenGL, so the mod also works with 26.2's experimental Vulkan

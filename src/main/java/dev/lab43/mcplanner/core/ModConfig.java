@@ -70,6 +70,12 @@ public final class ModConfig {
      */
     public Map<String, String> worldByContext = new LinkedHashMap<>();
 
+    /**
+     * When the newest Minecraft crash report the mod offered under "Crash report" was written (epoch ms): sent or
+     * declined, only newer ones are offered (see {@link CrashFiles#newest}).
+     */
+    public long crashReportSeen = 0;
+
     /** Loads the config; missing → defaults; unreadable → defaults and the bad file is kept as {@code <file>.bak}. */
     public static ModConfig load(Path file) {
         String text;
@@ -179,6 +185,46 @@ public final class ModConfig {
         else worldByContext.put(contextKey, ref);
     }
 
+    /**
+     * The settings that change what the mod does, for a crash report: switches, filters, distances, opacities, whether
+     * the servers are the default ones and how many worlds have a plan. Never an address or a world name.
+     */
+    public Map<String, String> reportSettings() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("overlay", onOff(overlay));
+        m.put("labels", onOff(labels));
+        m.put("labels through walls", onOff(labelsThroughWalls));
+        m.put("outlines through walls", onOff(outlinesThroughWalls));
+        m.put("block textures", onOff(textures));
+        m.put("path tiles", onOff(pathTiles));
+        m.put("area fill", onOff(areaFill));
+        m.put("HUD", hud ? hudCorner : "off");
+        m.put("draw up to", renderDistance + " blocks");
+        m.put("labels up to", labelDistance + " blocks");
+        m.put("fill", Math.round(fillOpacity * 100) + " %");
+        m.put("lines", Math.round(lineOpacity * 100) + " %");
+        m.put("kinds shown", shown(new String[] {"paths", "areas", "buildings", "markers"}, showPaths, showAreas, showBuildings, showMarkers));
+        m.put("statuses shown", shown(new String[] {"idea", "planned", "in progress", "done"}, showIdea, showPlanned, showInProgress, showDone));
+        m.put("sign-in server", DEFAULT_HUB_URL.equals(hubUrl) ? "default" : "custom");
+        m.put("plan server", DEFAULT_API_URL.equals(apiUrl) ? "default" : "custom");
+        m.put("worlds with a plan", String.valueOf(worldByContext == null ? 0 : worldByContext.size()));
+        return m;
+    }
+
+    private static String onOff(boolean b) {
+        return b ? "on" : "off";
+    }
+
+    private static String shown(String[] names, boolean... on) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < names.length; i++) {
+            if (!on[i]) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(names[i]);
+        }
+        return sb.length() == 0 ? "none" : sb.toString();
+    }
+
     /** Repairs values a hand-edited file may have broken. */
     ModConfig normalize() {
         if (worldByContext == null) worldByContext = new LinkedHashMap<>();
@@ -196,6 +242,7 @@ public final class ModConfig {
         labelDistance = clamp(labelDistance, 8, 1024);
         fillOpacity = clamp(fillOpacity);
         lineOpacity = clamp(lineOpacity);
+        if (crashReportSeen < 0) crashReportSeen = 0;
         return this;
     }
 

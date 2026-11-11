@@ -160,7 +160,8 @@ public final class Overlay {
                     Shape s = Shape.of(o);
                     if (s != null) out.add(s);
                 } catch (RuntimeException e) {
-                    Planner.LOG.warn("Couldn't prepare {} for drawing", o.name, e);
+                    Planner.LOG.warn("MC Planner: couldn't prepare an object ({}) for drawing", o.kind.label(), e);
+                    Planner.noteError("overlay: preparing an object", e);
                 }
             }
             return out;
@@ -296,7 +297,10 @@ public final class Overlay {
     }
 
     private void warnOnce(RuntimeException e) {
-        if (!warned) Planner.LOG.warn("MC Planner overlay couldn't draw", e);
+        if (!warned) {
+            Planner.LOG.warn("MC Planner overlay couldn't draw", e);
+            Planner.noteError("overlay: drawing", e);
+        }
         warned = true;
     }
 
@@ -382,7 +386,7 @@ public final class Overlay {
                         e.ghost = Ghost.build(e.mesh, se.data, s.o.schematic, s.bounds.x0(), s.o.y, s.bounds.z0(), mix(0xFFFFFF, s.o.color & 0xFFFFFF, 0.15f),
                                 Math.min(0.85f, textureAlpha(s.o, c)), materials.atlas(), level, planner.mc);
                         e.ghost.takeBuilt(old);
-                        Planner.LOG.info("MC Planner: {} — {} blocks with faces, {} quads ({} ms)", s.o.name, e.ghost.size(), e.mesh.size(), (System.nanoTime() - t0) / 1_000_000);
+                        Planner.LOG.info("MC Planner: schematic building — {} blocks with faces, {} quads ({} ms)", e.ghost.size(), e.mesh.size(), (System.nanoTime() - t0) / 1_000_000);
                     } catch (RuntimeException ex) {
                         warnOnce(ex);
                     }
